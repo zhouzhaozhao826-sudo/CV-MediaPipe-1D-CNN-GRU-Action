@@ -1,124 +1,168 @@
-# try_action
+# 基于计算机视觉的深蹲动作规范性评估系统
 
-第一版工程骨架聚焦于“深蹲动作规范性评估”的最小可运行链路：
+## 1. 项目背景
 
-- MediaPipe Pose 提取 33 个姿态关键点
-- 计算膝角、髋角、躯干倾角等基础特征
-- 基于髋部高度进行简易动作计数
-- 实时显示骨架与关键指标
-- 将逐帧特征导出为 CSV，供后续 1D-CNN + GRU 训练使用
+在体能训练和大众健身领域，动作不规范是导致训练效果不佳甚至运动损伤的主要原因。传统的动作评估依赖专业教练肉眼观察，存在主观性强、难以量化、无法大规模普及等问题。
 
-## 文件分层
+本项目利用 **计算机视觉 + 深度学习** 技术，构建了一套深蹲动作规范性自动评估系统。系统通过摄像头或视频提取人体姿态关键点，计算生物力学特征，对深蹲动作进行自动识别、错误分类和矫正建议输出。
 
-日常只需要记住下面 4 个入口：
+应用场景包括：居家健身智能指导、青少年体测辅助、康复训练监测、以及作为论文实验平台支撑 **ICEICT 国际会议** 投稿。
 
-- `run_workflow.py`：**统一工作流入口**，配置开关后一键完成「分析→标注→建数据集→训练→评估→推理」全流程，支持长视频切片和短视频批量两种模式
-- `app.py`：实时摄像头或单视频快速预览，适合演示和快速验证
-- `compare.py`：三方法对比评估（规则法 vs 深度法 vs 融合法），输出准确率 + 混淆矩阵 + JSON 报告
-- `export_segments.py`：导出每个 segment 的小视频和关键帧，方便人工复核
-- `_inspect_dataset.py`：快速检查 .npz 数据集结构和标签分布
+## 2. 系统目标
 
-核心算法都在 `pose_action/` 里，按功能分 5 组：
+- 基于 MediaPipe Pose 提取 33 个人体 3D 关键点，转换为 15 维尺度不变的几何特征
+- 实现对深蹲动作的四分类：**标准深蹲 / 下蹲深度不足 / 膝内扣 / 躯干过度前倾**
+- 构建三条技术路线并完成对比实验，支撑论文：
+  - **规则法**：生物力学阈值 + 状态机，实时判定，可解释性强
+  - **深度法**：1D-CNN + GRU 端到端分类，从标注数据中自动学习时空特征
+  - **融合法**：规则法 + 深度法加权融合，兼顾准确率与可解释性
 
-- `landmarks.py` + `features.py`：姿态点提取与角度/距离特征构建
-- `repetition.py` + `rules.py` + `segment.py`：计数、规则判断、动作切片
-- `dataset.py` + `model.py` + `training.py`：样本生成+标签管理、模型定义、训练评估
-- `config.py` + `pipeline.py`：项目配置、CSV 导出、视频主流程 + 融合推理 + 标注视频生成
-- `compare.py`（顶层）：规则法 vs 深度法 vs 融合法的统计对比与报告导出
+## 3. 上传文件说明
 
-目录建议固定为：
-
-- `datasets/round1/`：第一轮数据与产物
-- `datasets/round2/`：第二轮数据与产物（历史）
-- `datasets/round3/videos_round3/`：第三轮原始视频（当前使用）
-- `datasets/round3/exports_round3/`：第三轮导出结果、标签、数据集和训练结果
-
-## 运行方式
-
-先安装依赖：
-
-```bash
-pip install -r try_action/requirements.txt
+```
+try_action/
+├── README.md                         ← 本文件
+├── requirements.txt                  ← Python 依赖清单
+│
+├── app.py                            ← CLI 入口：摄像头实时规则法 / 视频特征提取+切片
+├── run_workflow.py                   ← 主工作流入口：一键完成 分析→标注→建数据集→训练→评估→推理
+├── compare.py                        ← 三方法对比评估：准确率 + 混淆矩阵 + JSON 报告
+├── export_segments.py                ← 可视化工具：导出每个切片的视频和关键帧
+├── _inspect_dataset.py               ← 调试工具：检查 .npz 数据集结构与标签分布
+│
+├── pose_action/                      ← 核心算法包
+│   ├── __init__.py                   ← 包入口，统一导出
+│   ├── config.py                     ← 全局配置：路径、摄像头参数、置信度阈值
+│   ├── landmarks.py                  ← MediaPipe Pose 封装：BGR帧 → 33个关键点 3D 坐标
+│   ├── features.py                   ← 特征工程：33关键点 → 15维尺度不变特征（角度、距离、比值）
+│   ├── segment.py                    ← 动作切片：峰值检测 + 8条质量过滤，自动切割视频中的深蹲段
+│   ├── rules.py                      ← 规则法核心：膝角>95°/躯干>35°/膝间距<髋宽×0.85 阈值判定
+│   ├── repetition.py                 ← 深蹲计数器：EMA 平滑 + 状态机（站立→下降→底部→站起）
+│   ├── model.py                      ← 1D-CNN + GRU 网络 (PyTorch)，输入(50帧,15维)→输出 4 类
+│   ├── training.py                   ← 训练/评估：早停、学习率衰减、类别权重、L2 正则化
+│   ├── dataset.py                    ← 数据集构建：切片→.npz、标签管理、规则法自动预标注
+│   └── pipeline.py                   ← 总控管线：特征提取→切片→判定→推理→融合→标注视频
+│
+├── datasets/                         ← 多轮数据与产出
+│   ├── round1/                       ← 第一轮（早期实验，含 segment 可视化视频）
+│   ├── round2/                       ← 第二轮（四类标签初步实验）
+│   └── round3/                       ← 第三轮（当前轮次）
+│       ├── videos_round3/            ← 原始视频（5个，每类/每个角度各一）
+│       │   ├── standard/
+│       │   │   ├── r3_standard_C.mp4 ← 标准深蹲·侧面90°
+│       │   │   └── r3_standard_Z.mp4 ← 标准深蹲·正面
+│       │   ├── depth_insufficient/
+│       │   │   └── r3_depth_C.mp4    ← 深度不足·侧面90°
+│       │   ├── knee_valgus/
+│       │   │   └── r3_valgus_Z.mp4   ← 膝内扣·正面
+│       │   └── torso_lean/
+│       │       └── r3_lean_C.mp4     ← 躯干前倾·侧面90°
+│       └── exports_round3/           ← 输出结果（特征CSV、切片结果、标签、数据集.npz、合并数据集）
+│
+├── mediapipe-text/                   ← MediaPipe 官方示例代码
+│   ├── Pose landmark detection.py    ← 33关键点检测与可视化（图片/摄像头）
+│   └── pose_landmarker.task          ← MediaPipe Pose 模型权重文件
+│
+├── 改进方案与工作流程.md              ← 核心设计文档：三条技术路线、15维特征推导、切片算法、操作手册
+├── MediaPipe_Comprehensive_Guide.md   ← MediaPipe 技术百科：架构、原理、对比、应用
+├── ICEICT_Guide_and_Strategy.md       ← ICEICT 投稿指南与策略
+├── Action_Evaluation_System_Paper_Plan.md ← 论文大纲与创新点设计
+├── pu_er_tea_line_fixed.png           ← 前期实验辅助图
+└── pu_er_tea_recognition_line.png
 ```
 
-使用摄像头运行：
+### 各文件作用速查
 
-```bash
-python try_action/app.py --source camera
+| 文件 | 一句话作用 |
+|:---|:---|
+| `app.py` | 摄像头实时规则法 / 视频特征提取+切片，双模式 CLI |
+| `run_workflow.py` | **主要入口**：改配置开关，一键完成全流程，支持长视频切片和短视频批量两种模式 |
+| `compare.py` | 规则法 vs 深度法 vs 融合法统计对比，输出准确率+混淆矩阵+JSON |
+| `export_segments.py` | 把每个动作段导出为小视频+底部/起止关键帧 |
+| `_inspect_dataset.py` | 快速检查 .npz 数据集结构、shape、标签分布 |
+| `config.py` | 全局路径与参数默认值 |
+| `landmarks.py` | BGR帧 → MediaPipe Pose 推理 → 33个3D关键点坐标 |
+| `features.py` | 33关键点 → 15维几何特征（7角度 + 3高度 + 3距离 + 2比值） |
+| `segment.py` | 髋部高度峰值检测 → 自动切割完整深蹲段（含8条质量过滤） |
+| `rules.py` | 规则法核心：bottom帧阈值判定，输出错误类型+矫正建议+置信度 |
+| `repetition.py` | EMA平滑 + 状态机，实时追踪站立→下降→底部→站起循环 |
+| `model.py` | 1D-CNN + GRU 网络（PyTorch），(50,15) → 4类 logits |
+| `training.py` | 训练循环 + 早停 + LR衰减 + 类别权重 + L2正则 |
+| `dataset.py` | 切片→.npz训练集；标签模板/录入/汇总；规则法自动预标注 |
+| `pipeline.py` | 总控管线：特征提取→切片→规则判定→DL推理→融合→标注视频 |
+
+## 4. 技术架构概览
+
+### 4.1 三条技术路线
+
+```
+输入视频/摄像头
+        │
+        ▼
+  MediaPipe Pose (33关键点 3D坐标)
+        │
+        ▼
+  15维尺度不变特征 (角度/距离/比值)
+        │
+        ├─→ 规则法 (rules.py):         生物力学阈值 + 状态机 → 实时反馈
+        │
+        ├─→ 深度法 (model.py):         1D-CNN+GRU 端到端分类 → 离线视频分析
+        │
+        └─→ 融合法 (pipeline.py):      规则法×α + 深度法×(1-α) 加权融合
 ```
 
-处理本地视频：
+### 4.2 四类动作标签
+
+| 标签 | 名称 | 判定标准 |
+|:---|:---|:---|
+| 0 | `standard` | 膝角≤95°、膝间距≥髋宽×0.85、躯干倾角≤35° |
+| 1 | `depth_insufficient` | 底部膝角 > 95° |
+| 2 | `knee_valgus` | 底部膝间距 < 髋宽 × 0.85 |
+| 3 | `torso_lean` | 底部躯干倾角 > 35° |
+
+## 5. 快速开始
+
+### 安装依赖
 
 ```bash
-python try_action/app.py --source video --video-path path/to/video.mp4
+pip install -r requirements.txt
 ```
 
-导出每个 segment 的小视频和关键帧：
+### 摄像头实时规则法
 
 ```bash
-python try_action/export_segments.py --video-path try_action/videos/深蹲.mp4 --segments-path try_action/exports/深蹲_features_segments.csv --output-dir try_action/exports/segment_views --export-video --export-frames
+python app.py --source camera
 ```
 
-如果只想先看一部分 segment：
+### 视频特征提取 + 切片
 
 ```bash
-python try_action/export_segments.py --video-path try_action/videos/深蹲.mp4 --segments-path try_action/exports/深蹲_features_segments.csv --output-dir try_action/exports/segment_views --export-frames --start-id 1 --end-id 10
+python app.py --source video --video-path datasets/round3/videos_round3/standard/r3_standard_C.mp4
 ```
 
-三方法对比评估：
+### 一键全流程（推荐）
+
+编辑 `run_workflow.py` 顶部的 `VIDEO_SOURCE` 和开关，然后：
 
 ```bash
-# 基础对比（无真实标签时仅输出三方法判定对比）
-python try_action/compare.py \
-    --video-path path/to/video.mp4 \
-    --checkpoint-path path/to/best_cnn_gru_model.pth
+python run_workflow.py
+```
 
-# 带真实标签（计算准确率+混淆矩阵）
-python try_action/compare.py \
-    --video-path path/to/video.mp4 \
+支持的开关：`RUN_VIDEO_ANALYSIS` / `AUTO_LABEL` / `BUILD_DATASET` / `RUN_TRAINING` / `RUN_EVALUATION` / `RUN_MODEL_INFERENCE`
+
+### 三方法对比评估
+
+```bash
+python compare.py \
+    --video-path datasets/round3/videos_round3/test.mp4 \
     --checkpoint-path path/to/best_cnn_gru_model.pth \
     --labels-path path/to/labels.csv \
     --output-json compare_report.json
 ```
 
-完整工作流（推荐）：直接编辑 `run_workflow.py` 顶部的配置区和开关，然后：
+## 6. 注意事项
 
-```bash
-python try_action/run_workflow.py
-```
-
-注意：
-
-- 训练脚本会自动过滤 `label = -1` 的未标注样本
-- 当前至少建议有 4 个已标注动作段再启动训练
-- 当前至少建议有 2 个类别且每类不只 1 个已标注样本
-- 输出目录中会生成最佳模型、训练历史和训练指标 JSON
-- 导出 segment 片段后，优先根据 `bottom` 关键帧判断主错误类型，再填写 `深蹲_labels.csv`
-- 最新切片算法会自动过滤明显无效的 segment，包括过短、幅度不足、起止站立不稳定和膝角变化不足的片段
-
-## 当前版本的定位
-
-这个版本不是最终论文系统，而是论文主线的工程起点。它优先解决 4 件事：
-
-- 跑通 MediaPipe Pose
-- 得到稳定的逐帧结构化特征
-- 切入深蹲单动作场景
-- 为后续数据标注、动作切片、1D-CNN+GRU 训练做好输入准备
-
-## 已完成 & 可扩展方向
-
-### 已实现
-
-- 深蹲四分类错误标签体系（standard / depth_insufficient / knee_valgus / torso_lean）
-- 动作周期自动切片（峰值检测 + 8条质量过滤规则）
-- 规则法自动预标注（`AUTO_LABEL` 开关，大幅减少人工标注量）
-- 短视频批量处理模式（`TRAIN_DATA_MODE = "short_video_batch"`，无需切片无需标注）
-- 训练后推理与三方法对比评估（`compare.py`，准确率 + 混淆矩阵 + JSON 报告）
-- 融合法标注视频生成（三行并列显示规则法/深度法/融合法判定）
-- 训练优化：Early Stopping + LR Scheduler + Weight Decay + Class Weights
-
-### 可扩展方向
-
-- 增加 YOLOv8-Pose 对比实验
-- 扩展到更多动作类型（硬拉、卧推等）
-- 增加更多数据增强策略缓解过拟合
+- 训练前至少需要 4 个已标注动作段，且不少于 2 个类别每类至少 1 个样本
+- 切片算法会自动过滤过短、幅度不足、起止不稳定等无效段
+- 规则法自动预标注（`AUTO_LABEL=True`）可大幅减少人工标注量，但需人工复核边界情况
+- 短视频批量模式（`TRAIN_DATA_MODE="short_video_batch"`）无需切片、无需标注，目录名即标签
