@@ -1,5 +1,11 @@
 # 基于计算机视觉的深蹲动作规范性评估系统
 
+前情提要：
+本项目是作者本人手搓，不是二次制作本项目已跑通全流程，可作为入门小项目或者学科作业
+改进方案与工作流程是项目说明里最重要的文件务必仔细阅读
+数据集是亲自或者朋友拍摄所以不方便公开，上传文件中的export-round3是我最新一轮的数据集训练出来的成果里面有最新的权重可以直接使用，也可以自行获取数据集按照改进方案与工作流程进行工作
+
+
 ## 1. 项目背景
 
 在体能训练和大众健身领域，动作不规范是导致训练效果不佳甚至运动损伤的主要原因。传统的动作评估依赖专业教练肉眼观察，存在主观性强、难以量化、无法大规模普及等问题。
@@ -59,16 +65,8 @@ try_action/
 │       │       └── r3_lean_C.mp4     ← 躯干前倾·侧面90°
 │       └── exports_round3/           ← 输出结果（特征CSV、切片结果、标签、数据集.npz、合并数据集）
 │
-├── mediapipe-text/                   ← MediaPipe 官方示例代码
-│   ├── Pose landmark detection.py    ← 33关键点检测与可视化（图片/摄像头）
-│   └── pose_landmarker.task          ← MediaPipe Pose 模型权重文件
-│
 ├── 改进方案与工作流程.md              ← 核心设计文档：三条技术路线、15维特征推导、切片算法、操作手册
 ├── MediaPipe_Comprehensive_Guide.md   ← MediaPipe 技术百科：架构、原理、对比、应用
-├── ICEICT_Guide_and_Strategy.md       ← ICEICT 投稿指南与策略
-├── Action_Evaluation_System_Paper_Plan.md ← 论文大纲与创新点设计
-├── pu_er_tea_line_fixed.png           ← 前期实验辅助图
-└── pu_er_tea_recognition_line.png
 ```
 
 ### 各文件作用速查
