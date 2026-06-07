@@ -171,7 +171,8 @@ python compare.py \
 最终结果示例图
 
 
-<img width="1344" height="1279" alt="943bc03e040e6346fc6d6e48d9c4c7aa" src="https://github.com/user-attachments/assets/9068561d-4fab-4662-ac90-b504ca4c0d74" />
+<img width="1279" height="1471" alt="a1c7820afcb6730dc9d8c14c3a600e5e" src="https://github.com/user-attachments/assets/bbc26c23-a02f-4054-8f60-bbc3413c088f" />
+
 
 
 
