@@ -164,6 +164,17 @@ python compare.py \
 - 短视频批量模式（`TRAIN_DATA_MODE="short_video_batch"`）无需切片、无需标注，目录名即标签
 
 
+
+
+
+
 最终结果示例图
-<img width="890" height="501" alt="54a77930-357d-4f58-bc61-3b47c5ce255b" src="https://github.com/user-attachments/assets/e852e20b-26d5-45fc-98f4-16b281f2a198" />
+
+
+<img width="1344" height="1279" alt="943bc03e040e6346fc6d6e48d9c4c7aa" src="https://github.com/user-attachments/assets/9068561d-4fab-4662-ac90-b504ca4c0d74" />
+
+
+
+<img width="890" height="501" alt="image" src="https://github.com/user-attachments/assets/b6779ba4-51cc-4130-aaa1-96e1f324b715" />
+
 
