@@ -162,3 +162,8 @@ python compare.py \
 - 切片算法会自动过滤过短、幅度不足、起止不稳定等无效段
 - 规则法自动预标注（`AUTO_LABEL=True`）可大幅减少人工标注量，但需人工复核边界情况
 - 短视频批量模式（`TRAIN_DATA_MODE="short_video_batch"`）无需切片、无需标注，目录名即标签
+
+
+最终结果示例图
+<img width="890" height="501" alt="54a77930-357d-4f58-bc61-3b47c5ce255b" src="https://github.com/user-attachments/assets/e852e20b-26d5-45fc-98f4-16b281f2a198" />
+
